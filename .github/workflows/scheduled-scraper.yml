@@ -1,0 +1,80 @@
+name: Scheduled Scraper
+
+on:
+  schedule:
+    # Toutes les 2 heures de 08h à 18h UTC+3 (Madagascar)
+    # 08h UTC+3 = 05h UTC, 10h UTC+3 = 07h UTC, etc.
+    - cron: "0 5,7,9,11,13,15 * * *"
+  workflow_dispatch: # Permet de lancer manuellement le workflow depuis GitHub
+  push:
+    branches: [ main ] # Optionnel: lance aussi le scraper à chaque push sur main (si vous voulez)
+
+jobs:
+  scrape:
+    name: Scraper les offres d'emploi
+    runs-on: ubuntu-latest
+    timeout-minutes: 30 # Respecte les limites GitHub Actions (6h max pour les repos publics)
+    permissions:
+      contents: read # Permissions minimales nécessaires
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Configuration Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'pip' # Cache les dépendances pour accélérer les prochains runs
+
+      - name: Installation des dépendances système (Tesseract OCR)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr
+          sudo rm -rf /var/lib/apt/lists/*
+
+      - name: Installation des dépendances Python et Playwright
+        id: install-deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Configuration du fichier .env depuis les secrets GitHub
+        id: create-env
+        run: |
+          cat > .env << EOF
+          TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
+          GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
+          TURSO_DATABASE_URL=${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN=${{ secrets.TURSO_AUTH_TOKEN }}
+          HEADLESS=true
+          EOF
+          echo "✅ Fichier .env créé avec succès"
+
+      - name: Exécution du scraper (mode bot-once)
+        id: run-scraper
+        continue-on-error: false # Stoppe le workflow en cas d'erreur
+        run: |
+          echo "🚀 Démarrage du scraper..."
+          python main.py bot-once
+          echo "✅ Scraper terminé avec succès"
+
+      - name: Upload des logs en cas d'échec
+        uses: actions/upload-artifact@v4
+        if: failure() # Seulement si une étape a échoué
+        with:
+          name: scraper-logs-${{ github.run_number }}
+          path: |
+            *.log
+            .env
+          retention-days: 14 # Conserve les logs 14 jours
+          if-no-files-found: warn # Avertit si pas de logs trouvés
+
+      - name: Notification en cas d'échec (optionnel - vous pouvez utiliser une action de notification)
+        if: failure()
+        run: |
+          echo "❌ Le workflow a échoué ! Vérifiez les logs."
