@@ -170,8 +170,8 @@ async def init_db_async():
                 row = await cursor.fetchone()
                 if row and row[0] is not None:
                     current_version = row[0]
-            except sqlite3.OperationalError:
-                # Table schema_migrations n'existe pas encore
+            except (sqlite3.OperationalError, Exception):
+                # Table schema_migrations n'existe pas encore (gère aussi les erreurs Turso/libsql)
                 current_version = -1
             
             logger.info(f"Version actuelle du schéma: {current_version}")
@@ -202,8 +202,8 @@ async def init_db_async():
                 await db.execute("ALTER TABLE cv_utilisateur ADD COLUMN portfolio TEXT")
                 await db.commit()
                 logger.info("Colonne 'portfolio' ajoutée à cv_utilisateur")
-            except sqlite3.OperationalError:
-                pass  # Colonne déjà existante
+            except (sqlite3.OperationalError, Exception):
+                pass  # Colonne déjà existante (ou erreur Turso)
             
             # Ajout colonnes linkedin_url, facebook_url, website_url à offres_permanentes
             for col in ['linkedin_url', 'facebook_url', 'website_url']:
@@ -211,8 +211,8 @@ async def init_db_async():
                     await db.execute(f"ALTER TABLE offres_permanentes ADD COLUMN {col} TEXT")
                     await db.commit()
                     logger.info(f"Colonne '{col}' ajoutée à offres_permanentes")
-                except sqlite3.OperationalError:
-                    pass  # Colonne déjà existante
+                except (sqlite3.OperationalError, Exception):
+                    pass  # Colonne déjà existante (ou erreur Turso)
             
             logger.info("Initialisation de la base de données terminée!")
 
