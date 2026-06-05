@@ -37,5 +37,8 @@ COPY . .
 # Définir la variable d'environnement HEADLESS sur true (pour production)
 ENV HEADLESS=true
 
+# Exposer un port pour Back4App (même si non utilisé par le bot)
+EXPOSE 8000
+
 # Commande pour lancer le bot en mode complet
 CMD ["python", "main.py", "all"]
