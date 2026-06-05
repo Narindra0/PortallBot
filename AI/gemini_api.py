@@ -32,7 +32,7 @@ def nettoyer_reponse_ai(text):
 
     return text
 
-async def generer_lettre_motivation_gemini_async(cv_text, offre_titre, offre_entreprise, offre_details, portfolio=""):
+async def generer_lettre_motivation_gemini_async(cv_user, cv_parsed, offre_titre, offre_entreprise, offre_details):
     """Génère une lettre de motivation via Google Gemini 2.0 Flash, avec fallback OpenRouter."""
     # Essayer Gemini d'abord
     if GEMINI_API_KEY:
@@ -40,27 +40,46 @@ async def generer_lettre_motivation_gemini_async(cv_text, offre_titre, offre_ent
             # Nouveau client 2026
             client = genai.Client(api_key=GEMINI_API_KEY)
 
-            context_portfolio = f"Voici mon portfolio pour appuyer ma candidature : {portfolio}" if portfolio else ""
+            # Build user info string
+            user_info_parts = [f"Nom : {cv_user['nom']}", f"Email : {cv_user['email']}"]
+            if cv_user.get('telephone'):
+                user_info_parts.append(f"Téléphone : {cv_user['telephone']}")
+            if cv_user.get('portfolio'):
+                user_info_parts.append(f"Portfolio : {cv_user['portfolio']}")
+
+            # Build CV parsed info string
+            cv_parsed_parts = []
+            if cv_parsed.get('competences'):
+                cv_parsed_parts.append(f"Compétences clés : {', '.join(cv_parsed['competences'])}")
+            if cv_parsed.get('annees_exp'):
+                cv_parsed_parts.append(f"Années d'expérience : {cv_parsed['annees_exp']}")
+            if cv_parsed.get('postes'):
+                cv_parsed_parts.append(f"Postes précédents : {', '.join(cv_parsed['postes'])}")
+            if cv_parsed.get('niveau_etudes'):
+                cv_parsed_parts.append(f"Niveau d'études : {cv_parsed['niveau_etudes']}")
+            if cv_parsed.get('extrait_important'):
+                cv_parsed_parts.append(f"Extrait important : {cv_parsed['extrait_important']}")
 
             prompt = (
                 f"Tu es un expert en recrutement rédigeant des lettres de motivation percutantes, professionnelles et authentiques.\n\n"
                 f"RÈGLES STRICTES :\n"
-                "1. Produis une lettre de motivation de bonne qualité, concise et percutante (pas trop longue pour ne pas lasser les recruteurs), avec une structure claire et des arguments ciblés sur le poste visé.\n"
-                "2. S'appuie EXCLUSIVEMENT sur les informations contenues dans le CV fourni. Ne jamais ajouter d'expérience, compétence ou réalisation non mentionnée dans le CV.\n"
-                "3. Vérifie systématiquement que TOUTES les informations dans la lettre correspondent EXACTEMENT à des éléments présents dans le CV fourni. Aucune information inventée !\n\n"
+                "1. Produis une lettre de motivation concise (maximum 2000 caractères), percutante et adaptée au poste visé.\n"
+                "2. S'appuie EXCLUSIVEMENT sur les informations fournies (informations personnelles, CV, parsed CV). Ne jamais ajouter d'expérience, compétence ou réalisation non mentionnée.\n"
+                "3. Vérifie systématiquement que TOUTES les informations dans la lettre correspondent EXACTEMENT à des éléments fournis. Aucune information inventée !\n"
+                "4. Intègre de manière naturelle les informations de contact (email, téléphone si disponible) et portfolio si disponible.\n"
+                "5. Mentionne explicitement les compétences et expériences pertinentes du CV qui correspondent aux exigences du poste.\n\n"
                 f"Rédige une lettre de motivation unique et humaine pour le poste suivant.\n\n"
                 f"POSTE : {offre_titre}\n"
                 f"ENTREPRISE : {offre_entreprise}\n"
                 f"DÉTAILS OFFRE : {offre_details}\n\n"
-                f"MON CV :\n{cv_text}\n\n"
-                f"{context_portfolio}\n\n"
+                f"MES INFORMATIONS PERSONNELLES :\n{chr(10).join(user_info_parts)}\n\n"
+                f"MON CV COMPLET :\n{cv_user['cv_text']}\n\n"
+                f"MON CV ANALYSÉ :\n{chr(10).join(cv_parsed_parts)}\n\n"
                 f"AUTRES RÈGLES :\n"
-                "- Texte brut uniquement. Pas de markdown (pas de **, pas de #).\n"
+                "- Texte brut uniquement. Pas de markdown.\n"
                 "- Pas d'en-tête (adresse, date, objet).\n"
-                "- Pas d'introduction type 'Voici votre lettre'.\n"
-                "- Commence directement par 'Madame, Monsieur,' ou le nom du recruteur si connu.\n"
-                "- Ton professionnel mais chaleureux et authentique.\n"
-                "- Maximum 2500 caractères."
+                "- Commence directement par 'Madame, Monsieur,'.\n"
+                "- Ton professionnel mais chaleureux et authentique."
             )
 
             # Appel asynchrone via .aio (nouveauté 2026)
@@ -82,7 +101,7 @@ async def generer_lettre_motivation_gemini_async(cv_text, offre_titre, offre_ent
     # Fallback sur OpenRouter
     if OPENROUTER_API_KEY:
         logger.info(f"🔄 Fallback OpenRouter pour lettre: {offre_titre}")
-        return await generer_lettre_motivation_openrouter_async(cv_text, offre_titre, offre_entreprise, offre_details, portfolio)
+        return await generer_lettre_motivation_openrouter_async(cv_user, cv_parsed, offre_titre, offre_entreprise, offre_details)
 
     return None
 

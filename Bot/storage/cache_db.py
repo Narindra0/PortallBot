@@ -302,6 +302,7 @@ async def nettoyer_vieilles_offres_async():
             await db.commit()
 
 async def sauvegarder_cv_async(nom, email, telephone, portfolio, cv_text):
+    from AI.utils.cv_parser import parser_cv_complet
     async with _db_lock:
         async with get_async_conn() as db:
             date_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -311,6 +312,10 @@ async def sauvegarder_cv_async(nom, email, telephone, portfolio, cv_text):
                 VALUES (1, ?, ?, ?, ?, ?, ?)
             ''', (nom, email, telephone, portfolio, cv_text, date_now))
             await db.commit()
+
+    # Also save the parsed profile for matching
+    parsed_profile = parser_cv_complet(cv_text)
+    await sauvegarder_profil_matching_async(parsed_profile)
 
 async def recuperer_cv_async():
     async with get_async_conn() as db:

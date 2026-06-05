@@ -95,7 +95,7 @@ def formater_details_complets(offre_data):
     for titre, contenu in sections:
         titre_clean = titre.strip()
         emoji = emojis_map.get(titre_clean, "🔹")
-        sections_html.append(f"{emoji} <b>{titre_clean.upper()}</b>\n{escape_html(contenu.strip()[:1500])}")
+        sections_html.append(f"{emoji} <b>{titre_clean.upper()}</b>\n{escape_html(contenu.strip())}")
 
     if sections_html:
         msg += "\n\n".join(sections_html)

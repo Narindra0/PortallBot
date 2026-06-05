@@ -7,6 +7,7 @@ from AI.gemini_api import generer_lettre_motivation_gemini_async
 from AI.groq_api import generer_lettre_motivation_groq_async
 from AI.huggingface_api import generer_lettre_motivation_async as generer_lettre_motivation_hf_async
 from AI.openrouter_api import generer_lettre_motivation_openrouter_async
+from AI.utils.cv_parser import parser_cv_complet
 from Bot.config import GEMINI_API_KEY, GROQ_API_KEY, HF_API_KEY, OPENROUTER_API_KEY
 from Bot.storage.cache_db import (
     recuperer_cv_async,
@@ -32,8 +33,10 @@ async def creer_lettre_motivation(offre_data, reuse_existing=True):
     titre = offre_data.get('titre', 'Poste non spécifié')
     entreprise = offre_data.get('entreprise', 'Entreprise non spécifiée')
     details = offre_data.get('details', '')
-    portfolio = cv.get('portfolio', '')
     offre_url = offre_data.get('url', '')
+
+    # Parse CV to get structured info
+    cv_parsed = parser_cv_complet(cv['cv_text'])
 
     logger.info(f"📝 Préparation de la lettre pour: {titre} @ {entreprise}")
 
@@ -50,7 +53,7 @@ async def creer_lettre_motivation(offre_data, reuse_existing=True):
     if OPENROUTER_API_KEY:
         logger.info("🔄 Tentative avec OpenRouter (gratuit)...")
         lettre = await generer_lettre_motivation_openrouter_async(
-            cv['cv_text'], titre, entreprise, details, portfolio
+            cv, cv_parsed, titre, entreprise, details
         )
         if lettre:
             logger.info("✅ Lettre générée avec OpenRouter")
@@ -62,7 +65,7 @@ async def creer_lettre_motivation(offre_data, reuse_existing=True):
     if GROQ_API_KEY:
         logger.info("🔄 Fallback sur Groq...")
         lettre = await generer_lettre_motivation_groq_async(
-            cv['cv_text'], titre, entreprise, details, portfolio
+            cv, cv_parsed, titre, entreprise, details
         )
         if lettre:
             logger.info("✅ Lettre générée avec Groq")
@@ -74,7 +77,7 @@ async def creer_lettre_motivation(offre_data, reuse_existing=True):
     if GEMINI_API_KEY:
         logger.info("🔄 Fallback sur Gemini...")
         lettre = await generer_lettre_motivation_gemini_async(
-            cv['cv_text'], titre, entreprise, details, portfolio
+            cv, cv_parsed, titre, entreprise, details
         )
         if lettre:
             logger.info("✅ Lettre générée avec Gemini")
@@ -86,7 +89,7 @@ async def creer_lettre_motivation(offre_data, reuse_existing=True):
     if HF_API_KEY:
         logger.info("🔄 Dernier recours: HuggingFace...")
         lettre = await generer_lettre_motivation_hf_async(
-            cv['cv_text'], titre, entreprise, details, portfolio
+            cv, cv_parsed, titre, entreprise, details
         )
         if lettre:
             logger.info("✅ Lettre générée avec HuggingFace")
