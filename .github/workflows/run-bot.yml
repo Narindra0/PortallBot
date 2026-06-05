@@ -41,7 +41,7 @@ jobs:
             libxfixes3 \
             libxrandr2 \
             libgbm1 \
-            libasound2
+            libasound2t64
           sudo rm -rf /var/lib/apt/lists/*
 
       - name: Install Python dependencies
