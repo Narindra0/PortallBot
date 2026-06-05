@@ -1,0 +1,67 @@
+name: Run PortalBot (scheduled every 5h)
+on:
+  schedule:
+    - cron: "0 */5 * * *"  # Toutes les 5 heures
+  workflow_dispatch:  # Pour lancer manuellement si besoin
+  push:
+    branches: [ main ]
+
+jobs:
+  run-bot:
+    name: Run PortalBot
+    runs-on: ubuntu-latest
+    timeout-minutes: 300  # 5 heures MAX (pour être sûr, avant la limite de 6h)
+    concurrency:
+      group: "portal-bot"
+      cancel-in-progress: true  # Annule l'ancien run si un nouveau démarre
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            tesseract-ocr \
+            libnss3 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libgbm1 \
+            libasound2
+          sudo rm -rf /var/lib/apt/lists/*
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Create .env file from GitHub Secrets
+        run: |
+          cat > .env << EOF
+          TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
+          GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
+          TURSO_DATABASE_URL=${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN=${{ secrets.TURSO_AUTH_TOKEN }}
+          HEADLESS=true
+          EOF
+
+      - name: Run PortalBot (ALL mode)
+        run: python main.py all
