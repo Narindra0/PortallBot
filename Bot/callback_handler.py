@@ -3,33 +3,40 @@ Gestionnaire Telegram (Bot complet) pour PortalJob.
 Utilise python-telegram-bot v20+ pour une stabilité maximale.
 Gère les commandes, les callbacks et la configuration du CV.
 """
-import asyncio
+import html as html_module
 import time
 from functools import wraps
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler, 
-    MessageHandler, filters, ContextTypes, ConversationHandler
-)
-from telegram.constants import ParseMode
 
-from Bot.config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, CV_PDF_PATH
-from Bot.storage.cache_db import (
-    recuperer_offre_async, sauvegarder_cv_async, 
-    recuperer_cv_async, vider_cache,
-    lister_offres_permanentes_async, compter_offres_async,
-    ajouter_offre_async,
-    recuperer_lettres_pour_offre_async
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.constants import ParseMode
+from telegram.ext import (
+    Application,
+    CallbackQueryHandler,
+    CommandHandler,
+    ContextTypes,
+    ConversationHandler,
+    MessageHandler,
+    filters,
 )
-from Bot.storage.pdf_extractor import traiter_fichier_cv
+
 from AI.generator import creer_lettre_motivation, formater_lettre_pour_telegram
-from Bot.bot import formater_details_complets
-from Bot.utils.logger import logger
-from Bot.utils.cleanup import cleanup_after_request, log_memory_usage
 from AI.utils.intel import CompanyIntel
 from Bot.automation.apply import postuler_offre_portal
 from Bot.automation.mailer import envoyer_candidature_email, extraire_email_depuis_texte
-import html as html_module
+from Bot.bot import formater_details_complets
+from Bot.config import CV_PDF_PATH, TELEGRAM_CHAT_ID, TELEGRAM_TOKEN
+from Bot.storage.cache_db import (
+    ajouter_offre_async,
+    compter_offres_async,
+    lister_offres_permanentes_async,
+    recuperer_cv_async,
+    recuperer_lettres_pour_offre_async,
+    recuperer_offre_async,
+    sauvegarder_cv_async,
+)
+from Bot.storage.pdf_extractor import traiter_fichier_cv
+from Bot.utils.cleanup import cleanup_after_request
+from Bot.utils.logger import logger
 
 
 def with_cleanup(func):
@@ -56,7 +63,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Commande /start."""
     if str(update.effective_chat.id) != str(TELEGRAM_CHAT_ID):
         return
-        
+
     msg = (
         "👋 <b>Bienvenue sur PortalBot !</b>\n\n"
         "Je suis configuré pour t'envoyer les dernières offres de développement à Madagascar.\n\n"
@@ -98,7 +105,7 @@ async def afficher_liste_jobs(update, context, offset=0, edit=False):
         return
 
     msg = f"📋 <b>Offres d'emploi ({offset + 1} à {min(offset + limit, total)} sur {total})</b>\n\n"
-    
+
     keyboard = []
     for i, offre in enumerate(offres):
         cache_key = await ajouter_offre_async(offre)
@@ -111,7 +118,7 @@ async def afficher_liste_jobs(update, context, offset=0, edit=False):
         nav_buttons.append(InlineKeyboardButton("⬅️ Précédent", callback_data=f"jobspage_{max(0, offset - limit)}"))
     if offset + limit < total:
         nav_buttons.append(InlineKeyboardButton("Suivant ➡️", callback_data=f"jobspage_{offset + limit}"))
-        
+
     if nav_buttons:
         keyboard.append(nav_buttons)
 
@@ -134,20 +141,20 @@ async def afficher_liste_jobs(update, context, offset=0, edit=False):
 async def generer_nouvelle_lettre(context, offre):
     """Génère une nouvelle lettre de motivation pour une offre."""
     status_msg = await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="🤖 Génération de la lettre en cours...")
-    
+
     # Appel au LLM avec reuse_existing=False pour toujours générer une nouvelle lettre
     success, result = await creer_lettre_motivation(offre, reuse_existing=False)
-    
+
     await status_msg.delete()
-    
+
     if success:
         parties = formater_lettre_pour_telegram(result)
         header = f"✉️ <b>LETTRE DE MOTIVATION</b>\n📌 {offre['titre']}\n🏢 {offre['entreprise']}\n"
         await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=header, parse_mode=ParseMode.HTML)
-        
+
         for p in parties:
             await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=p)
-            
+
         footer = "✅ <b>Lettre prête !</b>"
         await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=footer, parse_mode=ParseMode.HTML)
     else:
@@ -185,7 +192,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("🔍 Profil Société", callback_data=f"intel_{data}")],
             [InlineKeyboardButton("🤖 Postuler via AI", callback_data=f"apply_{data}")]
         ])
-        
+
         # On envoie un nouveau message pour les détails (plus lisible)
         await context.bot.send_message(
             chat_id=TELEGRAM_CHAT_ID,
@@ -206,7 +213,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cv = await recuperer_cv_async()
         if not cv:
             await context.bot.send_message(
-                chat_id=TELEGRAM_CHAT_ID, 
+                chat_id=TELEGRAM_CHAT_ID,
                 text="⚠️ Tu n'as pas encore configuré ton CV. Utilise /configurer_cv."
             )
             return
@@ -216,7 +223,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         existing_letters = []
         if offre_url:
             existing_letters = await recuperer_lettres_pour_offre_async(offre_url)
-        
+
         if existing_letters:
             # We have existing letters - show choice
             keyboard_buttons = []
@@ -227,7 +234,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 preview = letter_data['lettre'][:50].replace('\n', ' ')
                 keyboard_buttons.append([
                     InlineKeyboardButton(
-                        f"📄 Utiliser lettre du {date_str} ({preview}...)", 
+                        f"📄 Utiliser lettre du {date_str} ({preview}...)",
                         callback_data=f"useletter_{idx}_{cache_key}"
                     )
                 ])
@@ -236,7 +243,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("✨ Générer une nouvelle lettre", callback_data=f"newletter_{cache_key}")
             ])
             reply_markup = InlineKeyboardMarkup(keyboard_buttons)
-            
+
             await context.bot.send_message(
                 chat_id=TELEGRAM_CHAT_ID,
                 text=f"📋 <b>Lettres existantes pour cette offre :</b>\n\nTu as déjà {len(existing_letters)} lettre(s) de motivation pour {offre['titre']} @ {offre['entreprise']}.",
@@ -246,35 +253,35 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             # No existing letters - generate new one
             await generer_nouvelle_lettre(context, offre)
-            
+
     elif data.startswith("useletter_"):
         # Use existing letter
         parts = data.split("_")
         letter_idx = int(parts[1])
         cache_key = "_".join(parts[2:])
         offre = await recuperer_offre_async(cache_key)
-        
+
         if not offre:
             await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="❌ Offre expirée.")
             return
-            
+
         offre_url = offre.get('url', '')
         existing_letters = await recuperer_lettres_pour_offre_async(offre_url)
-        
+
         if 0 <= letter_idx < len(existing_letters):
             selected_letter = existing_letters[letter_idx]['lettre']
             parties = formater_lettre_pour_telegram(selected_letter)
             header = f"✉️ <b>LETTRE DE MOTIVATION (EXISTANTE)</b>\n📌 {offre['titre']}\n🏢 {offre['entreprise']}\n"
             await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=header, parse_mode=ParseMode.HTML)
-            
+
             for p in parties:
                 await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=p)
-                
+
             footer = "✅ <b>Lettre prête !</b>"
             await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=footer, parse_mode=ParseMode.HTML)
         else:
             await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="❌ Lettre non trouvée.")
-            
+
     elif data.startswith("newletter_"):
         # Generate new letter even if existing ones exist
         cache_key = data[len("newletter_"):]
@@ -291,42 +298,42 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
          if not offre:
              await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="❌ Offre expirée.")
              return
-         
+
          nom = offre.get('entreprise')
          msg_wait = await context.bot.send_message(
-             chat_id=TELEGRAM_CHAT_ID, 
-             text=f"🔍 Recherche d'infos sur <b>{nom}</b>...", 
+             chat_id=TELEGRAM_CHAT_ID,
+             text=f"🔍 Recherche d'infos sur <b>{nom}</b>...",
              parse_mode=ParseMode.HTML
          )
-         
+
          intel = await CompanyIntel.search_company_info(nom)
          await msg_wait.delete()
-         
+
          if not intel or not any(intel.values()):
              await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=f"❌ Aucune info trouvée pour <b>{nom}</b>.", parse_mode=ParseMode.HTML)
              return
-             
+
          res = f"📊 <b>Intelligence Entreprise : {nom}</b>\n\n"
-         
+
          if intel.get('summary'):
              summary_safe = html_module.escape(intel['summary'])
              res += f"✨ <b>Résumé IA</b> :\n<i>{summary_safe}</i>\n\n"
-             
+
          if intel['website']: res += f"🌐 <b>Site</b> : {intel['website']}\n"
          if intel['linkedin']: res += f"🟦 <b>LinkedIn</b> : {intel['linkedin']}\n"
          if intel['facebook']: res += f"🟦 <b>Facebook</b> : {intel['facebook']}\n"
-         
+
          boutons = []
          if intel['linkedin']: boutons.append(InlineKeyboardButton("LinkedIn", url=intel['linkedin']))
          if intel['facebook']: boutons.append(InlineKeyboardButton("Facebook", url=intel['facebook']))
          if intel['website']: boutons.append(InlineKeyboardButton("Site Web", url=intel['website']))
-         
+
          keyboard = InlineKeyboardMarkup([boutons]) if boutons else None
          await context.bot.send_message(
-             chat_id=TELEGRAM_CHAT_ID, 
-             text=res, 
-             parse_mode=ParseMode.HTML, 
-             reply_markup=keyboard, 
+             chat_id=TELEGRAM_CHAT_ID,
+             text=res,
+             parse_mode=ParseMode.HTML,
+             reply_markup=keyboard,
              disable_web_page_preview=True
          )
 
@@ -334,39 +341,39 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Auto-candidature avec IA
         cache_key = data[6:]
         offre = await recuperer_offre_async(cache_key)
-        
+
         if not offre:
             await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="❌ Offre expirée dans le cache.")
             return
-            
+
         cv = await recuperer_cv_async()
         if not cv:
             await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="⚠️ Tu n'as pas encore configuré ton CV. Utilise /configurer_cv.")
             return
-            
+
         url_offre = offre.get('url')
         if not url_offre or "portaljob-madagascar.com" not in url_offre:
             await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="❌ L'auto-apply n'est actuellement supporté que sur PortalJob.")
             return
 
         status_msg = await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="🤖 Génération de la lettre de motivation sur mesure...")
-        
+
         # 1. Génération LM (reuse existing if available)
         success_lm, result_lm = await creer_lettre_motivation(offre)
         if not success_lm:
             await status_msg.edit_text(f"❌ Erreur lors de la génération de la lettre :\n{result_lm}")
             return
-            
+
         # Optional: Sending LM as proof
         parties = formater_lettre_pour_telegram(result_lm)
         for p in parties:
             await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=p)
-            
+
         await status_msg.edit_text("⏳ Lancement du navigateur pour soumettre la candidature...")
-        
+
         # 2. Lancement Playwright en background (ça peut prendre 5-15 secondes)
         success_apply, msg_apply = await postuler_offre_portal(url_offre, result_lm)
-        
+
         if success_apply:
             await context.bot.send_message(
                 chat_id=TELEGRAM_CHAT_ID,
@@ -377,9 +384,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Playwright a échoué — Tentative de fallback par email
             details_offre = offre.get('details', '')
             email_recruteur = extraire_email_depuis_texte(details_offre)
-            
+
             raison_echec = html_module.escape(str(msg_apply))
-            
+
             if email_recruteur:
                 await context.bot.send_message(
                     chat_id=TELEGRAM_CHAT_ID,
@@ -441,7 +448,7 @@ async def voir_cv(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def config_cv_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cv = await recuperer_cv_async()
     prefix = "🔄 <b>Mise à jour de ton profil</b>\n\n" if cv else "📝 <b>Configuration du CV</b>\n\n"
-    
+
     msg = (
         f"{prefix}"
         "Comment souhaites-tu fournir tes informations ?\n\n"
@@ -460,9 +467,9 @@ async def search_company_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     nom = " ".join(context.args)
     msg_wait = await update.message.reply_text(f"🔍 Recherche d'infos sur <b>{nom}</b>...", parse_mode=ParseMode.HTML)
-    
+
     intel = await CompanyIntel.search_company_info(nom)
-    
+
     if not intel or not any(intel.values()):
         await msg_wait.edit_text(f"❌ Désolé, aucune information trouvée pour <b>{nom}</b>.", parse_mode=ParseMode.HTML)
         return
@@ -476,12 +483,12 @@ async def search_company_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if intel['website']: res += f"🌐 <b>Site</b> : {intel['website']}\n"
     if intel['linkedin']: res += f"🟦 <b>LinkedIn</b> : {intel['linkedin']}\n"
     if intel['facebook']: res += f"🟦 <b>Facebook</b> : {intel['facebook']}\n"
-    
+
     boutons = []
     if intel['linkedin']: boutons.append(InlineKeyboardButton("LinkedIn", url=intel['linkedin']))
     if intel['facebook']: boutons.append(InlineKeyboardButton("Facebook", url=intel['facebook']))
     if intel['website']: boutons.append(InlineKeyboardButton("Site Web", url=intel['website']))
-    
+
     keyboard = InlineKeyboardMarkup([boutons]) if boutons else None
     await msg_wait.delete()
     await update.message.reply_text(res, parse_mode=ParseMode.HTML, reply_markup=keyboard, disable_web_page_preview=True)
@@ -538,7 +545,7 @@ async def config_cv_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = update.message.document or update.message.photo[-1]
     context.user_data['file_id'] = file.file_id
     context.user_data['mime_type'] = update.message.document.mime_type if update.message.document else "image/jpeg"
-    
+
     await update.message.reply_text("📄 Fichier reçu ! Quel est ton <b>nom complet</b> ?", parse_mode=ParseMode.HTML)
     return FILE_TYPING_NAME
 
@@ -564,24 +571,24 @@ async def config_cv_file_phone(update: Update, context: ContextTypes.DEFAULT_TYP
 async def config_cv_file_portfolio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     portfolio = "" if update.message.text.lower() == "skip" else update.message.text
     status_msg = await update.message.reply_text("🔍 <b>Extraction en cours...</b>", parse_mode=ParseMode.HTML)
-    
+
     file_id = context.user_data['file_id']
     mime_type = context.user_data['mime_type']
-    
+
     # Extraction du texte
     success, result = await traiter_fichier_cv(file_id, TELEGRAM_TOKEN, mime_type)
-    
+
     await status_msg.delete()
-    
+
     if success:
         await sauvegarder_cv_async(
-            context.user_data['nom'], 
-            context.user_data['email'], 
-            context.user_data['phone'], 
+            context.user_data['nom'],
+            context.user_data['email'],
+            context.user_data['phone'],
             portfolio,
             result
         )
-        
+
         # Sauvegarde du PDF brut sur disque pour les emails de fallback
         if 'pdf' in mime_type.lower():
             try:
@@ -590,7 +597,6 @@ async def config_cv_file_portfolio(update: Update, context: ContextTypes.DEFAULT
                 async with aiohttp.ClientSession() as session:
                     async with session.get(bot_file.file_path) as resp:
                         pdf_bytes = await resp.read()
-                import os
                 with open(CV_PDF_PATH, 'wb') as f:
                     f.write(pdf_bytes)
                 await update.message.reply_text(f"✅ <b>CV enregistré + PDF sauvegardé !</b>\nExtrait : <code>{result[:100]}...</code>", parse_mode=ParseMode.HTML)
@@ -601,7 +607,7 @@ async def config_cv_file_portfolio(update: Update, context: ContextTypes.DEFAULT
             await update.message.reply_text(f"✅ <b>CV enregistré !</b>\nExtrait : <code>{result[:100]}...</code>", parse_mode=ParseMode.HTML)
     else:
         await update.message.reply_text(f"❌ Erreur extraction : {result}")
-        
+
     return ConversationHandler.END
 
 @with_cleanup
@@ -627,9 +633,9 @@ def setup_application():
     """Configure l'application Telegram."""
     if not TELEGRAM_TOKEN:
         return None
-        
+
     app = Application.builder().token(TELEGRAM_TOKEN).post_init(post_init).build()
-    
+
     # Conversation Handler pour CV
     cv_handler = ConversationHandler(
         entry_points=[CommandHandler("configurer_cv", config_cv_start)],
@@ -650,7 +656,7 @@ def setup_application():
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
-    
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("job", job_cmd))
     app.add_handler(CommandHandler("aide", aide))
@@ -658,7 +664,7 @@ def setup_application():
     app.add_handler(CommandHandler("search", search_company_cmd))
     app.add_handler(cv_handler)
     app.add_handler(CallbackQueryHandler(handle_callback))
-    
+
     return app
 
 def run_bot():

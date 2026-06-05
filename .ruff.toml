@@ -1,0 +1,17 @@
+line-length = 100
+target-version = "py310"
+
+[lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501",  # Line length (already handled by line-length config)
+    "E701",  # Multiple statements on one line (we like concise code!)
+    "E722",  # Bare except (okay for our use case)
+    "E741",  # Ambiguous variable name (l is okay in list comprehensions)
+    "F403",  # `from x import *` used
+    "F841",  # Unused variable
+    "N806",  # Variable in function should be lowercase
+    "N999",  # Invalid module name (Bot/Scraper are our package names)
+    "W291",  # Trailing whitespace
+    "W293",  # Blank line contains whitespace
+]

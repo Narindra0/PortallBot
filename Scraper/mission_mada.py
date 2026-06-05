@@ -3,16 +3,16 @@ Scraper Mission-Madagascar.mg - Offres freelance en développement.
 Basé sur httpx + BeautifulSoup (comme Asako).
 URL: https://mission-madagascar.mg/missions/domaines/developpement
 """
-import asyncio
-import httpx
 import re
-from bs4 import BeautifulSoup
 from datetime import datetime
-from Scraper.base import BaseScraper
-from Scraper.portal import est_une_offre_it, nettoyer_titre, est_date_recente
-from Bot.utils.logger import logger
-from AI.utils.intel import enrichir_offre_intel
+
+import httpx
+from bs4 import BeautifulSoup
+
 from Bot.bot import envoyer_offre_async
+from Bot.utils.logger import logger
+from Scraper.base import BaseScraper
+from Scraper.portal import est_date_recente, est_une_offre_it, nettoyer_titre
 
 
 class MissionMadaScraper(BaseScraper):

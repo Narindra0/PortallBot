@@ -1,6 +1,6 @@
 # Module de scraping
-from Scraper.portal import surveiller_portal, PortalScraper
-from Scraper.asako import surveiller_asako, AsakoScraper
+from Scraper.asako import AsakoScraper, surveiller_asako
 from Scraper.base import BaseScraper
+from Scraper.portal import PortalScraper, surveiller_portal
 
 __all__ = ['surveiller_portal', 'surveiller_asako', 'PortalScraper', 'AsakoScraper', 'BaseScraper']

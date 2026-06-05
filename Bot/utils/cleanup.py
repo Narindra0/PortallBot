@@ -8,20 +8,19 @@ Module de nettoyage automatique et surveillance de la mémoire pour PortalBot.
 
 import gc
 import os
-import time
-import psutil
 import tempfile
-from datetime import datetime, timedelta
-from typing import Optional
-from Bot.utils.logger import logger
+import time
+
+import psutil
+
 from Bot.config import (
+    ASAKO_SESSION_PATH,
     BASE_DIR,
-    LOG_DIR,
-    LOCAL_DB_PATH,
     CV_PDF_PATH,
+    LOCAL_DB_PATH,
     PORTAL_SESSION_PATH,
-    ASAKO_SESSION_PATH
 )
+from Bot.utils.logger import logger
 
 # === Configuration ===
 # Seuil de temps de réponse max (ms) pour exécuter le nettoyage après une requête
@@ -180,7 +179,7 @@ def cleanup_after_request(start_time: float) -> None:
         logger.info(f"🧹 Déclenchement nettoyage (mémoire > {MEMORY_THRESHOLD_MB} MB)")
     elif elapsed_ms < MAX_RESPONSE_TIME_FOR_CLEANUP:
         should_cleanup = True
-        logger.debug(f"🧹 Nettoyage après requête (temps réponse OK)")
+        logger.debug("🧹 Nettoyage après requête (temps réponse OK)")
     else:
         logger.debug("⏭️ Nettoyage sauté pour préserver la réactivité")
 

@@ -3,6 +3,7 @@ Configuration centralisée du projet PortalBot.
 Charge les variables d'environnement depuis .env (à la racine du projet).
 """
 import os
+
 from dotenv import load_dotenv
 
 # Déterminer le chemin de base du projet
@@ -61,14 +62,14 @@ CV_PDF_PATH = os.path.join(BASE_DIR, 'cv_utilisateur.pdf')
 def verifier_configuration():
     """Vérifie que les variables essentielles sont configurées."""
     erreurs = []
-    
+
     if not TELEGRAM_TOKEN:
         erreurs.append("TELEGRAM_TOKEN manquant")
     if not TELEGRAM_CHAT_ID or TELEGRAM_CHAT_ID == 'votre_chat_id_ici':
         erreurs.append("TELEGRAM_CHAT_ID non configuré")
     if not GEMINI_API_KEY:
         erreurs.append("GEMINI_API_KEY manquante (nécessaire pour les lettres de motivation et les résumés)")
-    
+
     return erreurs
 
 

@@ -1,12 +1,13 @@
-from google import genai
-import asyncio
 import re
+
+from google import genai
+
+from AI.openrouter_api import (
+    generer_lettre_motivation_openrouter_async,
+    generer_resume_entreprise_openrouter_async,
+)
 from Bot.config import GEMINI_API_KEY, OPENROUTER_API_KEY
 from Bot.utils.logger import logger
-from AI.openrouter_api import (
-    generer_resume_entreprise_openrouter_async,
-    generer_lettre_motivation_openrouter_async
-)
 
 # Configuration du modèle pour 2026
 MODEL_NAME = "gemini-2.0-flash"
@@ -16,19 +17,19 @@ def nettoyer_reponse_ai(text):
     Nettoie les réponses de l'IA pour Telegram (HTML).
     """
     if not text: return ""
-    
+
     # 1. Supprimer les blocs <think> complets (Insensible à la casse)
     text = re.sub(r'<(think)>.*?</\1>', '', text, flags=re.DOTALL | re.IGNORECASE)
-    
+
     # 2. Supprimer un début de <think> orphelin
     text = re.sub(r'<(think)>.*$', '', text, flags=re.DOTALL | re.IGNORECASE)
-    
+
     # 3. Supprimer tout tag HTML non supporté par Telegram (b, i, a, code, pre)
     text = re.sub(r'<(?!/?(b|i|a|code|pre)\b)[^>]+>', '', text, flags=re.IGNORECASE)
-    
+
     # 4. Nettoyage résiduel
     text = text.replace('**', '').replace('---', '').strip()
-    
+
     return text
 
 async def generer_lettre_motivation_gemini_async(cv_text, offre_titre, offre_entreprise, offre_details, portfolio=""):

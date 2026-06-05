@@ -1,7 +1,8 @@
 import asyncio
 import os
+
 from playwright.async_api import async_playwright
-from Bot.config import ASAKO_SESSION_PATH
+
 
 async def main():
     print("🚀 Lancement de l'outil de connexion pour Asako.mg...")
@@ -24,16 +25,16 @@ async def main():
             # On simule un user_agent classique pour éviter certains blocages
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
-        
+
         page = browser.pages[0] if browser.pages else await browser.new_page()
-        
+
         # Navigation vers la page de connexion
         await page.goto("https://www.asako.mg/connexion")
-        
+
         print("\n✅ Navigateur ouvert sur la page de connexion.")
         print("Prenez tout le temps nécessaire pour vous connecter.")
         print("⚠️  Ne fermez pas le navigateur ! ⚠️")
-        
+
         try:
             # On attend que l'utilisateur appuie sur Entrée dans le terminal
             await asyncio.get_event_loop().run_in_executor(None, input, "\n👉 APPUYEZ SUR ENTRÉE ICI UNE FOIS CONNECTÉ SUR LE NAVIGATEUR : ")
@@ -43,7 +44,7 @@ async def main():
             # Avant de fermer, on exporte l'état de la session (cookies + localstorage)
             export_path = os.path.join(base_dir, 'asako_session.json')
             await browser.storage_state(path=export_path)
-            
+
             await browser.close()
             print("\n🔒 Navigateur fermé et session enregistrée !")
             print(f"✅ EXPORT RÉUSSI : Le fichier '{export_path}' a été créé.")

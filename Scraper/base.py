@@ -2,19 +2,20 @@
 BaseScraper - Classe de base pour tous les scrapers du projet.
 Définit le contrat et les utilités partagées.
 """
-import asyncio
 from abc import ABC, abstractmethod
-from Bot.utils.logger import logger
+
+from AI.utils.cv_parser import parser_cv_complet
+from AI.utils.matcher import analyser_offre
 from Bot.storage.cache_db import (
-    sauvegarder_offre_permanente_async,
     offre_existe_async,
     offre_existe_doublon_async,
     recuperer_cv_async,
     recuperer_profil_matching_async,
-    sauvegarder_profil_matching_async
+    sauvegarder_offre_permanente_async,
+    sauvegarder_profil_matching_async,
 )
-from AI.utils.cv_parser import parser_cv_complet
-from AI.utils.matcher import analyser_offre
+from Bot.utils.logger import logger
+
 
 class BaseScraper(ABC):
     def __init__(self, name, telegram_bot=None):
@@ -93,7 +94,7 @@ class BaseScraper(ABC):
                     return False
 
         self.total_scraped += 1
-        
+
         # 4. Sauvegarde permanente
         if await sauvegarder_offre_permanente_async(offre_data):
             self.new_offers += 1

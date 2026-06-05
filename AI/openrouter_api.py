@@ -3,9 +3,11 @@ Module de connexion à l'API OpenRouter pour génération de lettres de motivati
 Entièrement gratuit avec le tier "free" (rate limité).
 Documentation: https://openrouter.ai/docs
 """
-import httpx
 import asyncio
 import re
+
+import httpx
+
 from Bot.config import OPENROUTER_API_KEY
 from Bot.utils.logger import logger
 

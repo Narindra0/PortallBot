@@ -3,10 +3,9 @@ CV Parser - Extraction automatique des mots-clés du CV pour matching.
 Sans IA, utilisant des règles et patterns.
 """
 import re
-import json
-from typing import Dict, List, Set
 
-def extraire_competences(cv_text: str) -> List[str]:
+
+def extraire_competences(cv_text: str) -> list[str]:
     """Extrait les compétences techniques du CV."""
     # Liste des compétences tech courantes à rechercher
     competences_courantes = {
@@ -62,7 +61,7 @@ def extraire_annees_experience(cv_text: str) -> int:
 
     return 0
 
-def extraire_postes(cv_text: str) -> List[str]:
+def extraire_postes(cv_text: str) -> list[str]:
     """Extrait les postes précédemment occupés."""
     postes_indicateurs = [
         'data analyst', 'data scientist', 'développeur', 'developpeur', 'developer',
@@ -132,7 +131,7 @@ def extraire_extraits_important(cv_text: str, max_phrases: int = 4) -> str:
 
     return cv_text[:500] if cv_text else ""
 
-def parser_cv_complet(cv_text: str) -> Dict:
+def parser_cv_complet(cv_text: str) -> dict:
     """Parse complet du CV et retourne un dictionnaire structuré."""
     if not cv_text:
         return {

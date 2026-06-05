@@ -3,7 +3,7 @@
 Module pour l'API Groq (très rapide !)
 """
 import re
-import asyncio
+
 from Bot.config import GROQ_API_KEY
 from Bot.utils.logger import logger
 
@@ -41,7 +41,7 @@ def get_groq_client():
         raise ImportError("Bibliothèque groq non installée")
     if not GROQ_API_KEY:
         raise ValueError("GROQ_API_KEY non configuré dans .env")
-    
+
     if _client is None:
         _client = AsyncGroq(api_key=GROQ_API_KEY)
     return _client

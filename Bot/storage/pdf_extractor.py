@@ -2,11 +2,13 @@
 Module d'extraction de texte depuis PDF et images.
 Refactorisé pour utiliser httpx (async) et le logger centralisé.
 """
-import os
 import io
+import os
+
 import httpx
-from PyPDF2 import PdfReader
 from PIL import Image
+from PyPDF2 import PdfReader
+
 from Bot.utils.logger import logger
 
 # Configuration Tesseract pour Windows
@@ -28,28 +30,28 @@ async def telecharger_fichier_telegram_async(file_id, token):
                 f"https://api.telegram.org/bot{token}/getFile",
                 params={"file_id": file_id}
             )
-            
+
             if resp.status_code != 200:
                 logger.error(f"Erreur getFile: {resp.status_code}")
                 return None
-                
+
             data = resp.json()
             if not data.get('ok'):
                 logger.error(f"Réponse Telegram non OK: {data}")
                 return None
-                
+
             file_path = data['result']['file_path']
-            
+
             # 2. Télécharger le fichier
             file_url = f"https://api.telegram.org/file/bot{token}/{file_path}"
             resp = await client.get(file_url)
-            
+
             if resp.status_code == 200:
                 return resp.content
-            
+
             logger.error(f"Erreur téléchargement fichier: {resp.status_code}")
             return None
-            
+
     except Exception as e:
         logger.error(f"Exception téléchargement Telegram: {e}")
         return None
@@ -78,12 +80,12 @@ def extraire_texte_ocr(content):
         image = Image.open(io.BytesIO(content))
         if image.mode != 'RGB':
             image = image.convert('RGB')
-        
+
         try:
             text = pytesseract.image_to_string(image, lang='fra+eng')
         except:
             text = pytesseract.image_to_string(image)
-            
+
         return text.strip() if text.strip() else None
     except Exception as e:
         logger.error(f"Erreur OCR image: {e}")
@@ -92,7 +94,7 @@ def extraire_texte_ocr(content):
 async def traiter_fichier_cv(file_id, token, mime_type=None):
     """Traite un fichier CV et extrait le texte (Async wrapper)."""
     logger.info("📥 Début du traitement du fichier CV...")
-    
+
     content = await telecharger_fichier_telegram_async(file_id, token)
     if not content:
         return False, "❌ Impossible de télécharger le fichier."
@@ -134,5 +136,5 @@ async def traiter_fichier_cv(file_id, token, mime_type=None):
         cleaned = ' '.join(text.split())
         logger.info(f"✅ Texte extrait: {len(cleaned)} caractères.")
         return True, cleaned[:5000]
-    
+
     return False, "❌ Aucun texte extrait."

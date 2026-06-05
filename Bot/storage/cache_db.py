@@ -2,14 +2,16 @@
 Gestionnaire de cache avec support Turso (SQLite cloud) + fallback SQLite local.
 Support Asynchrone ajouté pour la stabilité.
 """
-import sqlite3
-import aiosqlite
-import json
-import time
-import os
 import asyncio
-from datetime import datetime, timedelta
-from Bot.config import TURSO_DATABASE_URL, TURSO_AUTH_TOKEN, LOCAL_DB_PATH
+import json
+import os
+import sqlite3
+import time
+from datetime import datetime
+
+import aiosqlite
+
+from Bot.config import LOCAL_DB_PATH, TURSO_AUTH_TOKEN, TURSO_DATABASE_URL
 from Bot.utils.logger import logger
 
 # Vérifier si libsql est disponible
@@ -119,13 +121,13 @@ class AsyncCursorWrapper:
     """Wrapper pour les résultats du curseur."""
     def __init__(self, cursor):
         self.cursor = cursor
-    
+
     async def fetchone(self):
         return await asyncio.to_thread(self.cursor.fetchone)
-    
+
     async def fetchall(self):
         return await asyncio.to_thread(self.cursor.fetchall)
-    
+
     def __aiter__(self):
         return self
 
@@ -137,9 +139,9 @@ class AsyncCursorWrapper:
 
     async def __aenter__(self):
         return self
-        
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        pass 
+        pass
 
 def get_async_conn():
     """
@@ -173,9 +175,9 @@ async def init_db_async():
             except (sqlite3.OperationalError, Exception):
                 # Table schema_migrations n'existe pas encore (gère aussi les erreurs Turso/libsql)
                 current_version = -1
-            
+
             logger.info(f"Version actuelle du schéma: {current_version}")
-            
+
             # Étape 2: Appliquer les migrations non appliquées
             for idx, migration_sql in enumerate(MIGRATIONS):
                 if idx > current_version:
@@ -195,7 +197,7 @@ async def init_db_async():
                     except Exception as e:
                         logger.error(f"Erreur lors de l'application de la migration {idx}: {e}")
                         raise
-            
+
             # Étape 3: Ajouter les colonnes supplémentaires (compatibilité)
             # Ajout colonne portfolio à cv_utilisateur
             try:
@@ -204,7 +206,7 @@ async def init_db_async():
                 logger.info("Colonne 'portfolio' ajoutée à cv_utilisateur")
             except (sqlite3.OperationalError, Exception):
                 pass  # Colonne déjà existante (ou erreur Turso)
-            
+
             # Ajout colonnes linkedin_url, facebook_url, website_url à offres_permanentes
             for col in ['linkedin_url', 'facebook_url', 'website_url']:
                 try:
@@ -213,14 +215,14 @@ async def init_db_async():
                     logger.info(f"Colonne '{col}' ajoutée à offres_permanentes")
                 except (sqlite3.OperationalError, Exception):
                     pass  # Colonne déjà existante (ou erreur Turso)
-            
+
             logger.info("Initialisation de la base de données terminée!")
 
 async def ajouter_offre_async(offre_data):
     """Sert de cache temporaire pour les boutons Telegram (callback data)."""
     url = offre_data.get('url', '')
     cache_key = f"offre_{hash(url) & 0x7FFFFFFF}"
-    
+
     async with _db_lock:
         async with get_async_conn() as db:
             await db.execute('''
@@ -238,7 +240,7 @@ async def ajouter_offre_async(offre_data):
                 offre_data.get('date_decouverte', '')
             ))
             await db.commit()
-    
+
     await nettoyer_vieilles_offres_async()
     return cache_key
 
@@ -252,7 +254,7 @@ async def recuperer_offre_async(cache_key):
         ''', (cache_key,))
         async with cursor:
             row = await cursor.fetchone()
-            
+
     if row is not None:
         titre, entreprise, date_pub, url, details, timestamp = row
         if (time.time() - timestamp) / 3600 <= MAX_AGE_HOURS:
@@ -327,7 +329,6 @@ async def recuperer_cv_async():
 
 async def sauvegarder_profil_matching_async(profil_data):
     """Sauvegarde le profil extrait du CV pour matching."""
-    import json
     async with _db_lock:
         async with get_async_conn() as db:
             date_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -347,7 +348,6 @@ async def sauvegarder_profil_matching_async(profil_data):
 
 async def recuperer_profil_matching_async():
     """Récupère le profil pour matching."""
-    import json
     async with get_async_conn() as db:
         cursor = await db.execute('''
             SELECT competences, annees_exp, postes, niveau_etudes, extrait_important, date_extraction
@@ -432,7 +432,7 @@ async def lister_offres_permanentes_async(limit=10, offset=0):
             ORDER BY date_enregistrement DESC 
             LIMIT ? OFFSET ?
         ''', (limit, offset))
-        
+
         offres = []
         async with cursor:
             rows = await cursor.fetchall()

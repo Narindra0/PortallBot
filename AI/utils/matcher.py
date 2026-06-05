@@ -3,9 +3,6 @@ Matcher - Algorithme de scoring offre vs profil sans IA.
 Calcule un score 0-100% et génère un résumé explicable.
 """
 import re
-from typing import Dict, List, Tuple, Optional
-from AI.utils.cv_parser import parser_cv_complet
-from Bot.utils.logger import logger
 
 # Configuration des scores (modifiable)
 SCORE_CONFIG = {
@@ -20,7 +17,7 @@ SCORE_CONFIG = {
 EXCLUSIONS_CONTRAT = ['stage', 'stagiaire', 'apprentissage', 'alternance', 'volontariat', 'volunteer']
 MOTS_SENIORITE = ['senior', 'sénior', 'lead', 'leader', 'expert', 'confirmé', 'confirmé', 'expérimenté']
 
-def extraire_experience_requise(offre_text: str) -> Optional[int]:
+def extraire_experience_requise(offre_text: str) -> int | None:
     """Extrait l'expérience requise dans l'offre."""
     patterns = [
         r'(\d+)\+?\s*ans?\s+d\'exp[eé]rience',
@@ -38,7 +35,7 @@ def extraire_experience_requise(offre_text: str) -> Optional[int]:
 
     return None
 
-def detecter_type_contrat(offre_text: str) -> Tuple[str, bool]:
+def detecter_type_contrat(offre_text: str) -> tuple[str, bool]:
     """Détecte le type de contrat et si c'est une exclusion."""
     text_lower = offre_text.lower()
 
@@ -65,7 +62,7 @@ def compter_mots_seniorite(offre_text: str) -> int:
             count += 1
     return min(count, 2)  # Max 2 pour le score
 
-def trouver_competences_dans_offre(offre_text: str, competences_cv: List[str]) -> List[str]:
+def trouver_competences_dans_offre(offre_text: str, competences_cv: list[str]) -> list[str]:
     """Trouve quelles compétences du CV apparaissent dans l'offre."""
     offre_lower = offre_text.lower()
     trouvees = []
@@ -79,7 +76,7 @@ def trouver_competences_dans_offre(offre_text: str, competences_cv: List[str]) -
 
     return trouvees
 
-def matcher_poste(titre_offre: str, postes_cv: List[str]) -> Tuple[bool, bool]:
+def matcher_poste(titre_offre: str, postes_cv: list[str]) -> tuple[bool, bool]:
     """Vérifie si le poste correspond à l'historique."""
     titre_lower = titre_offre.lower()
 
@@ -94,7 +91,7 @@ def matcher_poste(titre_offre: str, postes_cv: List[str]) -> Tuple[bool, bool]:
 
     return False, False
 
-def calculer_score_match(profil: Dict, offre: Dict) -> Tuple[int, Dict]:
+def calculer_score_match(profil: dict, offre: dict) -> tuple[int, dict]:
     """
     Calcule le score de matching entre le profil et l'offre.
     Retourne: (score 0-100, details dict)
@@ -188,7 +185,7 @@ def calculer_score_match(profil: Dict, offre: Dict) -> Tuple[int, Dict]:
 
     return score_final, details
 
-def generer_resume_match(score: int, details: Dict, profil: Dict, offre: Dict) -> str:
+def generer_resume_match(score: int, details: dict, profil: dict, offre: dict) -> str:
     """Génère un résumé textuel du matching (sans IA)."""
     lignes = []
 
@@ -219,16 +216,16 @@ def generer_resume_match(score: int, details: Dict, profil: Dict, offre: Dict) -
                 comp_str += f" +{len(comp_trouvees)-6} autres"
             lignes.append(f"✓ {len(comp_trouvees)}/{comp_total} compétences: {comp_str}")
         else:
-            lignes.append(f"⚠️ Aucune compétence du CV trouvée")
+            lignes.append("⚠️ Aucune compétence du CV trouvée")
         lignes.append("")
 
     # Poste
     if details['poste_match_exact']:
-        lignes.append(f"✓ Poste correspondant à ton profil")
+        lignes.append("✓ Poste correspondant à ton profil")
     elif details['poste_match_partiel']:
-        lignes.append(f"~ Poste partiellement correspondant")
+        lignes.append("~ Poste partiellement correspondant")
     else:
-        lignes.append(f"⚠️ Poste différent de ton historique")
+        lignes.append("⚠️ Poste différent de ton historique")
     lignes.append("")
 
     # Expérience
@@ -244,12 +241,12 @@ def generer_resume_match(score: int, details: Dict, profil: Dict, offre: Dict) -
     if details['exclusion_detectee']:
         lignes.append(f"❌ Exclusion: Contrat en {details['type_contrat']}")
     elif details['type_contrat'] == 'CDI':
-        lignes.append(f"✓ Contrat: CDI")
+        lignes.append("✓ Contrat: CDI")
 
     # Points forts si bon match
     if score >= 60:
         lignes.append("")
-        lignes.append(f"💡 Points forts:")
+        lignes.append("💡 Points forts:")
 
         points_forts = []
         if len(comp_trouvees) >= 3:
@@ -265,7 +262,7 @@ def generer_resume_match(score: int, details: Dict, profil: Dict, offre: Dict) -
 
     return "\n".join(lignes)
 
-def analyser_offre(offre: Dict, profil: Dict) -> Dict:
+def analyser_offre(offre: dict, profil: dict) -> dict:
     """
     Analyse complète d'une offre vs le profil.
     Retourne un dict avec score, résumé et détails.

@@ -3,12 +3,15 @@ Module de bot Telegram pour envoi des offres.
 Refactorisé pour utiliser python-telegram-bot (async) et HTML.
 """
 import html
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
-from Bot.config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
-from Bot.storage.cache_db import ajouter_offre_async, recuperer_profil_matching_async
+
 from AI.utils.matcher import analyser_offre
+from Bot.config import TELEGRAM_CHAT_ID, TELEGRAM_TOKEN
+from Bot.storage.cache_db import ajouter_offre_async, recuperer_profil_matching_async
 from Bot.utils.logger import logger
+
 
 def escape_html(text):
     """Échappe les caractères HTML spéciaux."""
@@ -70,13 +73,13 @@ def formater_details_complets(offre_data):
     logger.info(f"📝 Détails bruts pour {titre} : {repr(details)}")
 
     msg = f"📌 <b>{titre}</b>\n🏢 {entreprise}\n\n"
-    
+
     import re
     # Extraction dynamique de toutes les sections délimitées par **Titre:**
     # On cherche le motif **Texte:** (ou **Texte** sans :) suivi du contenu jusqu'au prochain ** ou la fin
     # Plus flexible : accepte espace optionnel autour du titre, colonne optionnelle, n'importe quel séparateur de ligne
     sections = re.findall(r'\*\*\s*(.*?)\s*:?\s*\*\*[\s\n]+(.*?)(?=\s*\*\*|\Z)', details, re.DOTALL)
-    
+
     sections_html = []
     emojis_map = {
         "Missions": "📋",

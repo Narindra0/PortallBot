@@ -2,15 +2,21 @@
 Scraper Asako.mg - Version Class-based et Optimisée (HTTpx + BeautifulSoup).
 Plus rapide et moins gourmand en ressources.
 """
-import asyncio
-import httpx
-import re
-from bs4 import BeautifulSoup
 from datetime import datetime
-from Scraper.base import BaseScraper
-from Scraper.portal import est_une_offre_it, nettoyer_titre, convertir_date_relative, est_date_recente
-from Bot.utils.logger import logger
+
+import httpx
+from bs4 import BeautifulSoup
+
 from Bot.bot import envoyer_offre_async
+from Bot.utils.logger import logger
+from Scraper.base import BaseScraper
+from Scraper.portal import (
+    convertir_date_relative,
+    est_date_recente,
+    est_une_offre_it,
+    nettoyer_titre,
+)
+
 
 class AsakoScraper(BaseScraper):
     def __init__(self, telegram_bot=None):
@@ -32,22 +38,22 @@ class AsakoScraper(BaseScraper):
                 soup = BeautifulSoup(response.text, 'html.parser')
                 # Chaque annonce commence par un h3 avec un lien
                 items = soup.select('h3')
-                
+
                 logger.info(f"📊 Asako: {len(items)} offres potentielles.")
 
                 for h3 in items:
                     link_el = h3.find('a')
                     if not link_el or '/annonces/' not in link_el.get('href', ''):
                         continue
-                        
+
                     titre = nettoyer_titre(link_el.get_text().strip())
-                    
+
                     if not est_une_offre_it(titre):
                         continue
-                    
+
                     href = link_el.get('href')
                     url_offre = f"{self.url_base}{href}" if href.startswith('/') else href
-                    
+
                     # Traitement de base (doublons)
                     if not await self.traiter_offre({'url': url_offre, 'titre': titre, 'entreprise': ''}):
                         continue
@@ -55,12 +61,12 @@ class AsakoScraper(BaseScraper):
                     # Extraire infos restantes (souvent dans l'élément p/div suivant)
                     meta_el = h3.find_next(['p', 'div', 'span'])
                     meta_text = meta_el.get_text().strip() if meta_el else "aujourd'hui"
-                    
+
                     # Format type: "Il y a 4 jours | CDI - Secteur"
                     parts = [p.strip() for p in meta_text.split('|')]
                     date_text = parts[0] if parts else "aujourd'hui"
                     date_pub = convertir_date_relative(date_text)
-                    
+
                     if not est_date_recente(date_pub, max_jours=4):
                         continue
 
@@ -68,7 +74,7 @@ class AsakoScraper(BaseScraper):
 
                     # Extraire détails ET entreprise depuis la page de détail
                     details, entreprise = await self._extraire_details_et_entreprise(client, url_offre)
-                    
+
                     offre_data = {
                         'titre': titre,
                         'entreprise': entreprise,
@@ -78,7 +84,7 @@ class AsakoScraper(BaseScraper):
                         'date_publication': date_pub,
                         'date_decouverte': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
-                    
+
                     # Sauvegarde finale et envoi
                     await self.traiter_offre(offre_data)
                     if self.telegram_bot:

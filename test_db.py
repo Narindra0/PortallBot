@@ -4,17 +4,17 @@ Script de test pour la base de données SQLite de PortalBot.
 Vérifie l'initialisation, les migrations et les opérations CRUD.
 """
 import asyncio
-import os
-from Bot.storage.cache_db import (
-    init_db_async,
-    sauvegarder_cv_async,
-    recuperer_cv_async,
-    sauvegarder_offre_permanente_async,
-    offre_existe_async,
-    lister_offres_permanentes_async,
-    compter_offres_async,
-)
+
 from Bot.config import LOCAL_DB_PATH
+from Bot.storage.cache_db import (
+    compter_offres_async,
+    init_db_async,
+    lister_offres_permanentes_async,
+    offre_existe_async,
+    recuperer_cv_async,
+    sauvegarder_cv_async,
+    sauvegarder_offre_permanente_async,
+)
 
 
 async def test_database():

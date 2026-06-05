@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from AI.utils.cv_parser import parser_cv_complet
-from AI.utils.matcher import analyser_offre, calculer_score_match, generer_resume_match
+from AI.utils.matcher import analyser_offre
 
 # Simuler un CV texte
 cv_text = """

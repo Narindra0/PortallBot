@@ -3,17 +3,16 @@ Module de génération de lettres de motivation.
 Adapté pour l'asynchronisme.
 Priorité: OpenRouter (gratuit) → Groq → Gemini → HuggingFace
 """
+from AI.gemini_api import generer_lettre_motivation_gemini_async
+from AI.groq_api import generer_lettre_motivation_groq_async
+from AI.huggingface_api import generer_lettre_motivation_async as generer_lettre_motivation_hf_async
+from AI.openrouter_api import generer_lettre_motivation_openrouter_async
+from Bot.config import GEMINI_API_KEY, GROQ_API_KEY, HF_API_KEY, OPENROUTER_API_KEY
 from Bot.storage.cache_db import (
     recuperer_cv_async,
-    sauvegarder_lettre_motivation_async,
     recuperer_derniere_lettre_pour_offre_async,
-    recuperer_lettres_pour_offre_async
+    sauvegarder_lettre_motivation_async,
 )
-from AI.openrouter_api import generer_lettre_motivation_openrouter_async
-from AI.groq_api import generer_lettre_motivation_groq_async
-from AI.gemini_api import generer_lettre_motivation_gemini_async
-from AI.huggingface_api import generer_lettre_motivation_async as generer_lettre_motivation_hf_async
-from Bot.config import OPENROUTER_API_KEY, GROQ_API_KEY, GEMINI_API_KEY, HF_API_KEY
 from Bot.utils.logger import logger
 
 
