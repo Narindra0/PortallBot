@@ -4,6 +4,7 @@ Module pour l'API Groq (très rapide !)
 """
 import re
 
+from AI.prompt_cover_letter import SYSTEM_PROMPT, build_user_prompt
 from Bot.config import GROQ_API_KEY
 from Bot.utils.logger import logger
 
@@ -32,6 +33,7 @@ GROQ_MODEL = "llama-3.1-8b-instant"
 # Client Groq (initialisation paresseuse)
 _client = None
 
+
 def get_groq_client():
     """
     Retourne le client Groq asynchrone (singleton)
@@ -45,6 +47,7 @@ def get_groq_client():
     if _client is None:
         _client = AsyncGroq(api_key=GROQ_API_KEY)
     return _client
+
 
 async def generer_lettre_motivation_groq_async(cv_user, cv_parsed, offre_titre, offre_entreprise, offre_details):
     """
@@ -61,69 +64,14 @@ async def generer_lettre_motivation_groq_async(cv_user, cv_parsed, offre_titre, 
         client = get_groq_client()
         logger.info(f"🔄 Tentative avec Groq (modèle: {GROQ_MODEL})...")
 
-        # Build user info string
-        user_info_parts = [f"Nom : {cv_user['nom']}", f"Email : {cv_user['email']}"]
-        if cv_user.get('telephone'):
-            user_info_parts.append(f"Téléphone : {cv_user['telephone']}")
-        if cv_user.get('portfolio'):
-            user_info_parts.append(f"Portfolio : {cv_user['portfolio']}")
-
-        # Build CV parsed info string
-        cv_parsed_parts = []
-        if cv_parsed.get('competences'):
-            cv_parsed_parts.append(f"Compétences clés : {', '.join(cv_parsed['competences'])}")
-        if cv_parsed.get('annees_exp'):
-            cv_parsed_parts.append(f"Années d'expérience : {cv_parsed['annees_exp']}")
-        if cv_parsed.get('postes'):
-            cv_parsed_parts.append(f"Postes précédents : {', '.join(cv_parsed['postes'])}")
-        if cv_parsed.get('niveau_etudes'):
-            cv_parsed_parts.append(f"Niveau d'études : {cv_parsed['niveau_etudes']}")
-        if cv_parsed.get('extrait_important'):
-            cv_parsed_parts.append(f"Extrait important : {cv_parsed['extrait_important']}")
-
         messages = [
-            {
-                "role": "system",
-                "content": (
-                    "Tu es un expert en recrutement rédigeant des lettres de motivation PERCUTANTES, SPÉCIFIQUES et AUTHENTIQUES.\n"
-                    "\nRÈGLES STRICTES :\n"
-                    "1. MAXIMUM 2000 caractères - Concision absolue\n"
-                    "2. S'appuyer EXCLUSIVEMENT sur le CV fourni - AUCUNE invention\n"
-                    "3. RÈGLE CRITIQUE: Chaque expérience = 1 chiffre/métrique + 1 résultat\n"
-                    "   Exemples: \"10k utilisateurs\", \"+40% performant\", \"5 CRM déployés\"\n"
-                    "4. OBLIGATION: Mention spécifique de l'ENTREPRISE et du SECTEUR\n"
-                    "5. Intégrer portfolio, email, téléphone si disponibles\n"
-                    "\nTECHNOLOGIE :\n"
-                    "- Extraire TOUS les frameworks/langages du CV\n"
-                    "- Si stack moderne (React/Node/Docker) → mettre EN AVANT\n"
-                    "- Si stack older (Symfony/Python) → repositionner vers les impacts\n"
-                    "\nSTRUCTURE OBLIGATOIRE:\n"
-                    "Para 1: Accroche + Poste + Entreprise (personnalisé)\n"
-                    "Para 2: Expérience 1 + CHIFFRE\n"
-                    "Para 3: Expérience 2 + RÉSULTAT\n"
-                    "Para 4: Expérience 3 + IMPACT\n"
-                    "Para 5: Formation + Engagement (hackathon, certifs)\n"
-                    "Para 6: Fermeture + portfolio + contact\n"
-                    "\nFORMAT :\n"
-                    "- Texte brut uniquement\n"
-                    "- Pas d'en-tête\n"
-                    "- Commence par \"Madame, Monsieur,\"\n"
-                    "- Ton chaleureux mais professionnel\n"
-                    "- Phrases COURTES et DIRECTES\n"
-                )
-            },
+            {"role": "system", "content": SYSTEM_PROMPT},
             {
                 "role": "user",
-                "content": (
-                    f"Rédige une lettre de motivation unique et humaine pour le poste suivant.\n\n"
-                    f"POSTE : {offre_titre}\n"
-                    f"ENTREPRISE : {offre_entreprise}\n"
-                    f"DÉTAILS OFFRE : {offre_details}\n\n"
-                    f"MES INFORMATIONS PERSONNELLES :\n{chr(10).join(user_info_parts)}\n\n"
-                    f"MON CV COMPLET :\n{cv_user['cv_text']}\n\n"
-                    f"MON CV ANALYSÉ :\n{chr(10).join(cv_parsed_parts)}\n"
-                )
-            }
+                "content": build_user_prompt(
+                    cv_user, cv_parsed, offre_titre, offre_entreprise, offre_details
+                ),
+            },
         ]
 
         response = await client.chat.completions.create(
