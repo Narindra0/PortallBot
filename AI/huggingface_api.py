@@ -65,13 +65,31 @@ async def generer_lettre_motivation_async(cv_user, cv_parsed, offre_titre, offre
             cv_parsed_parts.append(f"Extrait important : {cv_parsed['extrait_important']}")
 
         system_prompt = (
-            "Tu es un expert en recrutement rédigeant des lettres de motivation percutantes, professionnelles et authentiques.\n"
+            "Tu es un expert en recrutement rédigeant des lettres de motivation PERCUTANTES, SPÉCIFIQUES et AUTHENTIQUES.\n"
             "\nRÈGLES STRICTES :\n"
-            "1. Produis une lettre de motivation concise (maximum 2000 caractères), percutante et adaptée au poste visé.\n"
-            "2. S'appuie EXCLUSIVEMENT sur les informations fournies (informations personnelles, CV, parsed CV). Ne jamais ajouter d'expérience, compétence ou réalisation non mentionnée.\n"
-            "3. Vérifie systématiquement que TOUTES les informations dans la lettre correspondent EXACTEMENT à des éléments fournis. Aucune information inventée !\n"
-            "4. Intègre de manière naturelle les informations de contact (email, téléphone si disponible) et portfolio si disponible.\n"
-            "5. Mentionne explicitement les compétences et expériences pertinentes du CV qui correspondent aux exigences du poste.\n"
+            "1. MAXIMUM 2000 caractères - Concision absolue\n"
+            "2. S'appuyer EXCLUSIVEMENT sur le CV fourni - AUCUNE invention\n"
+            "3. RÈGLE CRITIQUE: Chaque expérience = 1 chiffre/métrique + 1 résultat\n"
+            "   Exemples: \"10k utilisateurs\", \"+40% performant\", \"5 CRM déployés\"\n"
+            "4. OBLIGATION: Mention spécifique de l'ENTREPRISE et du SECTEUR\n"
+            "5. Intégrer portfolio, email, téléphone si disponibles\n"
+            "\nTECHNOLOGIE :\n"
+            "- Extraire TOUS les frameworks/langages du CV\n"
+            "- Si stack moderne (React/Node/Docker) → mettre EN AVANT\n"
+            "- Si stack older (Symfony/Python) → repositionner vers les impacts\n"
+            "\nSTRUCTURE OBLIGATOIRE:\n"
+            "Para 1: Accroche + Poste + Entreprise (personnalisé)\n"
+            "Para 2: Expérience 1 + CHIFFRE\n"
+            "Para 3: Expérience 2 + RÉSULTAT\n"
+            "Para 4: Expérience 3 + IMPACT\n"
+            "Para 5: Formation + Engagement (hackathon, certifs)\n"
+            "Para 6: Fermeture + portfolio + contact\n"
+            "\nFORMAT :\n"
+            "- Texte brut uniquement\n"
+            "- Pas d'en-tête\n"
+            "- Commence par \"Madame, Monsieur,\"\n"
+            "- Ton chaleureux mais professionnel\n"
+            "- Phrases COURTES et DIRECTES\n"
         )
 
         user_prompt = (
@@ -81,12 +99,7 @@ async def generer_lettre_motivation_async(cv_user, cv_parsed, offre_titre, offre
             f"DÉTAILS OFFRE : {offre_details}\n\n"
             f"MES INFORMATIONS PERSONNELLES :\n{chr(10).join(user_info_parts)}\n\n"
             f"MON CV COMPLET :\n{cv_user['cv_text']}\n\n"
-            f"MON CV ANALYSÉ :\n{chr(10).join(cv_parsed_parts)}\n\n"
-            f"AUTRES RÈGLES :\n"
-            "- Texte brut uniquement. Pas de markdown.\n"
-            "- Pas d'en-tête (adresse, date, objet).\n"
-            "- Commence directement par 'Madame, Monsieur,'.\n"
-            "- Ton professionnel mais chaleureux et authentique."
+            f"MON CV ANALYSÉ :\n{chr(10).join(cv_parsed_parts)}\n"
         )
 
         # Utilisation du Chat Completion via le client (gère les URLs automatiquement)
