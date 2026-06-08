@@ -12,9 +12,10 @@ from Bot.config import OPENROUTER_API_KEY
 from Bot.utils.logger import logger
 
 # Modèles gratuits disponibles sur OpenRouter (tier free)
-# deepseek/deepseek-chat:free - Bon pour le texte, très généreux rate limits
-# google/gemini-2.0-flash-exp:free - Alternative Google
-OPENROUTER_MODEL = "deepseek/deepseek-chat:free"
+# openrouter/free - Routeur automatique vers tout modèle gratuit disponible
+# deepseek/deepseek-v3.2:free - Alternative spécifique DeepSeek
+# meta-llama/llama-4-maverick:free - Alternative Llama
+OPENROUTER_MODEL = "openrouter/free"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
